@@ -1,0 +1,98 @@
+pipeline
+{
+    agent any
+    stages
+    {
+        stage('continuousDownload')
+        {
+            steps
+            {
+                script
+                {
+                    try
+                    {
+                        git 'https://github.com/agehma/Mvnp.git'
+                    }
+                    catch (Exception e1)
+                    {
+                        mail bcc: '', body: 'git unable to download the code from the github respository', cc: '', from: '', replyTo: '', subject: 'download failed', to: 'gitteam@gmail.com'
+                        exit(1)
+                    }
+                }
+            }
+        }
+        stage('ContinuousBuild')
+        {
+            steps
+            {
+                script
+                {
+                    try
+                    {
+                        sh 'mvn package'
+                    }
+                    catch (Exception e2)
+                    {
+                       mail bcc: '', body: 'mvn not able to build an artifact from the code', cc: '', from: '', replyTo: '', subject: 'mvn failed', to: 'devteam@gmail.com'
+                       exit(1) 
+                    }
+                }
+            }
+        }
+        stage('ContinuousDeployment')
+        {
+            steps
+            {
+                script
+                {
+                    try
+                    {
+                        deploy adapters: [tomcat9(credentialsId: '3933de1f-781a-4384-bab7-5258db7fbfd3', path: '', url: 'http://172.31.85.178:8080')], contextPath: 'testapp', war: '**/*.war'
+                    }
+                    catch (Exception e3)
+                    {
+                        mail bcc: '', body: 'deploy to qaserver tomcat failed', cc: '', from: '', replyTo: '', subject: 'deploy to qa failed', to: 'middlewareteam@gmail.com'
+                        exit(1)
+                    }
+                }
+            }
+        }
+        stage('ContinuousTesting')
+        {
+            steps
+            {
+                script
+                {
+                    try
+                    {
+                        git 'https://github.com/agehma/Seleniumscript.git'
+                        sh 'java -jar /var/lib/jenkins/workspace/DeclarativeP-Exception/testing.jar'
+                    }
+                    catch (Exception e4)
+                    {
+                        mail bcc: '', body: 'selenium testing script failed to test artifact', cc: '', from: '', replyTo: '', subject: 'selenium failed', to: 'qateam@gmail.com'
+                        exit(1)
+                    }
+                }
+            }
+        }
+        stage('ContinuousDelivery')
+        {
+            steps
+            {
+                script
+                {
+                    try
+                    {
+                        input message: 'awaiting DM approval', submitter: 'jaden'
+                        deploy adapters: [tomcat9(credentialsId: '3933de1f-781a-4384-bab7-5258db7fbfd3', path: '', url: 'http://172.31.85.56:8080')], contextPath: 'prodapp', war: '**/*.war'
+                    }
+                    catch (Exception e5)
+                    {
+                        mail bcc: '', body: 'unable to deliver into prodserver tomcat', cc: '', from: '', replyTo: '', subject: 'delivery failed', to: 'deliveryteam@gmail.com'
+                    }
+                }
+            }
+        }
+    }
+}
